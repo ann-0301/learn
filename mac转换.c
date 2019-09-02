@@ -1,5 +1,5 @@
 // AAAAAAAAAAAA -> aa:aa:aa:aa:aa:aa
-char * MacChangeFromAToa(char *srcmac, char *dstmac)
+void MacChangeFromAToa(char *srcmac, char *dstmac)
 {
   int i, j = 0;
   int k = 2;
@@ -27,7 +27,7 @@ char * MacChangeFromAToa(char *srcmac, char *dstmac)
 }
 
 // aa:aa:aa:aa:aa:aa -> AAAAAAAAAAAA
-char * MacChangeFromaToA(char *srcmac, char *dstmac)
+void MacChangeFromaToA(char *srcmac, char *dstmac)
 {
   int i, j = 0;
   for (i = 0; srcmac[i]; i++)
