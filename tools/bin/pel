@@ -1,0 +1,5 @@
+#!/bin/bash
+
+sed -i 's/^{/{\nPRINTF("Enter %s,%d\\n",__FUNCTION__,__LINE__);/' $1
+sed -i 's/\<return\>/PRINTF("Leave %s,%d\\n",__FUNCTION__,__LINE__);\nreturn/' $1
+

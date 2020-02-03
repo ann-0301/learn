@@ -1,0 +1,11 @@
+sudo docker run --user `id -u`:`id -g` -d -it --name se24-builder-7528  -v '/home/wangxiang/workspace/se24_7528:/home/se24_7528' se24:latest  /bin/bash
+sudo docker exec -it se24-builder-7528 /bin/bash
+
+
+sudo openvpn /etc/openvpn/client.ovpn
+
+
+telecomadmin
+nE7jA%5m
+
+tcdbg_printf("-----%s<%s>(%d)----------\n",__FILE__,__FUNCTION__,__LINE__);

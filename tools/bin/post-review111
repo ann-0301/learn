@@ -1,0 +1,57 @@
+#!/bin/bash
+
+POST_REVIEW="/usr/bin/post-review"
+CONF_FILE="review.conf"
+
+Summary=$(git log --pretty=oneline --graph -1)
+Summary=${Summary:43}
+Description=$(git log --abbrev-commit --abbrev=10 -1)
+#PBranch=$(git log --abbrev-commit --abbrev=10 -1 HEAD^ | grep "^commit" | cut -d' ' -f2)
+Branch=$(git branch | grep \* | awk '{print $NF}')
+Bugs=$(echo ${Description} | grep 'I#' | cut -d'#' -f3 | cut -d']' -f1)
+Groups=sw3
+People=
+
+function reset()
+{
+	rm -f ${CONF_FILE}
+}
+
+function read_review_id()
+{
+	if [ -f "${CONF_FILE}" ]; then
+		local line=$(cat ${CONF_FILE})
+		review_id=$(echo ${line}|cut -d '/' -f5)
+	fi
+}
+
+function prepare_review()
+{
+	if [ "${review_id}" != "" ]; then
+		${POST_REVIEW} --parent="${PBranch}" -r "${review_id}" -o
+	else
+		${POST_REVIEW} --parent="${PBranch}" \
+			--description="$Description" \
+			--summary="${Summary}"       \
+			--branch="${Branch}"         \
+			--bugs-closed="${Bugs}"      \
+			--target-groups="${Groups}"  \
+			--target-people="${People}" -o > "${CONF_FILE}"
+		cat "${CONF_FILE}"
+	fi
+}
+
+function main()
+{
+	case $1 in
+		r|R|reset )
+			reset
+			;;
+		* )
+			read_review_id
+			prepare_review "$1"
+			;;
+	esac
+}
+
+main "$@"

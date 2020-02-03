@@ -1,0 +1,68 @@
+#!/bin/bash
+
+commit_index=1
+commit_number=1
+commit_server=
+commit_branch=
+commit_name=
+
+
+############################################################
+# Routines
+############################################################
+
+function print_link()
+{
+	case $1 in
+		1 )
+			echo "\"core $2\":http://cameogit/gitweb/?p=rtlwrt.git;a=commitdiff;h=$2"
+			;;
+		2 )
+			echo "\"custom $2\":http://cameogit/gitweb/?p=rtlwrt_customize.git;a=commitdiff;h=$2"
+			;;
+
+	esac
+}
+
+function print_desc()
+{
+	echo "** \"$commit_server $commit_branch $commit_name\":http://cameogit/gitweb/?p=$commit_server.git;a=commitdiff;h=$commit_name"
+	echo "<pre>"
+	echo "$commit_message"
+	echo "</pre>"
+}
+
+############################################################
+# Main
+############################################################
+
+if [ ! -e ".git/config" ]; then
+	echo "Please switch to the root directory of your project!"
+	exit 1
+fi
+
+case $# in
+	1 )
+		commit_index=$1
+		commit_number=$1
+		;;
+	2 )
+		commit_index=$1
+		commit_number=$2
+		;;
+	* )
+		;;
+esac
+
+commit_server=$(grep url .git/config | cut -d ':' -f2)
+commit_branch=$(git branch | grep '*' | cut -d' ' -f2)
+
+while [ "$commit_index" -le "$commit_number" ]
+do
+	commit_name=$(git log -1 --skip $((commit_index-1)) --pretty=format:'%H')
+	commit_message=$(git log -1 --skip $((commit_index-1))})
+	print_desc
+	let "commit_index += 1"
+done
+
+exit 0
