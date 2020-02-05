@@ -1,0 +1,16 @@
+https://www.jianshu.com/p/9072f99218d1
+此方法可以永久性的保留更改（方法二）
+在/etc/docker文件夹下创建daemon.json文件，默认次文件夹是不存在的，执行下边这句话进行创建：
+vi /etc/docker/daemon.json
+然后将官方加速器（下边键值）加入到daemon.json中，。
+{
+  "registry-mirrors": ["https://registry.docker-cn.com"]
+}
+最后重启docker服务
+service docker restart
+国内的镜像地址：
+
+#网易
+http://hub-mirror.c.163.com
+#ustc
+https://docker.mirrors.ustc.edu.cn
