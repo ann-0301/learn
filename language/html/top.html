@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html style="height: 100%">
+   <head>
+       <meta charset="utf-8">
+   </head>
+   <body style="height: 100%; margin: 0">
+       <div id="container" style="height: 100%"></div>
+       <script type="text/javascript" src="echarts.min.js"></script>
+       <script type="text/javascript">
+var device_counter = 0;
+var level_num = [1,0,0,0,0,0]; // 每一层节点数量，用于计算x坐标
+var father_name = [0,0,0,0]; // 每一次父節點
+var father_info = {};
+var level = 0;// 当前处于第几层
+var data_info = [];
+var link_info = [];
+var dev_num = 0; //AP + client标号
+
+function openWindow(url, windowName, wide, high) {
+	if (document.all)
+		var xMax = screen.width, yMax = screen.height;
+	else if (document.layers)
+		var xMax = window.outerWidth, yMax = window.outerHeight;
+	else
+		var xMax = 640, yMax=500;
+	var xOffset = (xMax - wide)/2;
+	var yOffset = (yMax - high)/3;
+
+	var settings = 'width='+wide+',height='+high+',screenX='+xOffset+',screenY='+yOffset+',top='+yOffset+',left='+xOffset+', resizable=yes, toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=yes';
+	window.open(url, windowName, settings);
+}
+
+function showDetailOnClick(count) {
+	openWindow('/multi_ap_popup_device_details.asp?count='+count, 'showDeviceDetail', 700, 500);
+}
+
+function data_push(object_json)
+{
+	var data_temp = {};
+	var link_temp = {};
+	var x = (level_num[level] - 1) * 100;
+	var y = level * 300;
+	var line_color, line_type;
+	device_counter++;
+	dev_name=object_json.device_name+'('+String(device_counter)+')';
+	if (level == 0)
+	{
+		data_temp = {"name":dev_name,"x":x,"y":y,"symbol":"image:\/\/.\/424.jpg",mac:object_json.mac_address,count:device_counter,ip:object_json.ip_addr};
+	}
+	else
+	{
+		data_temp = {"name":dev_name,"x":x,"y":y,"symbol":"circle",label:{show:true,position:"inside"},mac:object_json.mac_address,count:device_counter,ip:object_json.ip_addr,rssi:Number(father_info.rssi)-100,connect:father_info.connect};
+		for (data_search in object_json.neighbor_devices)
+		{
+		//object_json.neighbor_devices[data_search].
+		}
+		//link_temp = {source: father_name[level],target: dev_num,lineStyle:{color:"blue",type : 'dotted'}}
+			if (father_info.connect == "5G")
+			{
+				line_color = "red";
+				line_type = "dotted"
+			}
+			else if (data_temp.connect == "2G")
+			{
+				line_color = "#77ccf2";
+				line_type = "dashed"
+			}
+			else
+			{
+				line_color = "#77ccf2";
+				line_type = "solid"
+			}
+		link_temp = {source: father_name[level],target: dev_num,lineStyle:{color:line_color,type : line_type}}
+	}
+
+	data_info.push(data_temp);
+	link_info.push(link_temp);
+	
+	if (0 != object_json["station_info"].length)
+	{
+		level ++;
+		var father_num=dev_num;
+		for (sta_device in object_json["station_info"])
+		{
+			dev_num++;
+			level_num[level]++;
+			x = (level_num[level] - 1) * 100;
+			y = level * 300;
+			var aaaaaa="station_info";
+ 			var host_name = '{"70ef0029dc3b":"wangxiang-OMEN-by-HP-Laptop"}';
+var hostname_json = JSON.parse(host_name);
+		data_temp = {"name":hostname_json[object_json[aaaaaa][sta_device].station_mac],type:"sta","x":x,"y":y,"symbol":"bottom",label:{show:true,position:"bottom"},
+					mac:object_json["station_info"][sta_device].station_mac,connect:object_json["station_info"][sta_device].station_connected_band,
+ 					rssi:Number(object_json["station_info"][sta_device].station_rssi)-100,downspeed:object_json["station_info"][sta_device].station_downlink,
+					upspeed:object_json["station_info"][sta_device].station_uplink};//添加信息在這裏
+			if (data_temp.connect == "5G")
+			{
+				line_color = "red";
+				line_type = "dotted"
+			}
+			else if (data_temp.connect == "2G")
+			{
+				line_color = "#77ccf2";
+				line_type = "dashed"
+			}
+			else
+			{
+				line_color = "#77ccf2";
+				line_type = "solid"
+			}
+			link_temp = {source: father_num,target: dev_num,lineStyle:{color:line_color,type : line_type}}
+			data_info.push(data_temp);
+			link_info.push(link_temp);
+		}
+		level --;
+	}
+
+	if (0 != object_json["child_devices"].length)
+	{
+		level ++;
+		father_name[level] =  dev_name;
+		for (child_device in object_json["child_devices"])
+		{
+			for (info_tmp in  object_json["neighbor_devices"])
+			{
+				if (object_json["neighbor_devices"][info_tmp].neighbor_name == object_json["child_devices"][child_device].device_name)
+				{
+					father_info={'rssi':object_json["neighbor_devices"][info_tmp].neighbor_rssi,
+					'connect':object_json["neighbor_devices"][info_tmp].neighbor_band}
+				}
+			}
+			dev_num++;
+			level_num[level]++;
+			data_push(object_json["child_devices"][child_device]);
+		}
+		level --;
+	}
+}
+
+function showTopology()
+{
+	/*var string_json = '{"device_name":"aaa","ip_addr":"192.168.2.1","mac_address":"00e04a267101","neighbor_devices":[{"neighbor_mac":"00e04c867101","neighbor_name":"ccccccc","neighbor_rssi":"0","neighbor_band":"TBU"}],"station_info":[],"child_devices":[{"device_name":"aaaaaa","ip_addr":"192.168.1.35","mac_address":"00e04c867010","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029dc3b","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"}],"child_devices":[{"device_name":"ddddd","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[],"child_devices":[]}]},{"device_name":"ccccccc","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029dc22","station_rssi":"51","station_connected_band":"TTT","station_downlink":"130","station_uplink":"1"}],"child_devices":[{"device_name":"eeee","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[{"station_mac":"70ef3339dc22","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"},{"station_mac":"70ef549dc22","station_rssi":"51","station_connected_band":"5G","station_downlink":"130","station_uplink":"1"},{"station_mac":"70ef00234dc22","station_rssi":"51","station_connected_band":"5G","station_downlink":"130","station_uplink":"1"}],"child_devices":[]},{"device_name":"ffff","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[],"child_devices":[{"device_name":"gggg","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029d12","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"}],"child_devices":[]}]}]}]}';*/
+var string_json = /*'{"device_name":"EasyMesh_Device","ip_addr":"192.168.1.1","mac_address":"142e5e27b49c","neighbor_devices":[{"neighbor_mac":"00e04c867101","neighbor_name":"ccccccc","neighbor_rssi":"0","neighbor_band":"5G"}],"station_info":[{"station_mac":"00e04c867010","station_rssi":"0","station_connected_band":"5G","station_downlink":"0","station_uplink":"0"}],"child_devices":[{"device_name":"ccccccc","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[],"child_devices":[]}]}';*/
+'{"device_name":"EasyMesh_Device","ip_addr":"192.168.1.1","mac_address":"142e5e27b49c","neighbor_devices":[{"neighbor_mac":"00e04c867010","neighbor_name":"aaaaaa","neighbor_rssi":"62","neighbor_band":"5G"},{"neighbor_mac":"00e04c867101","neighbor_name":"ccccccc","neighbor_rssi":"45","neighbor_band":"2G"}],"station_info":[],"child_devices":[{"device_name":"aaaaaa","ip_addr":"192.168.1.35","mac_address":"00e04c867010","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029dc3b","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"}],"child_devices":[]},{"device_name":"ccccccc","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[{"neighbor_mac":"00e04c867101","neighbor_name":"ddd","neighbor_rssi":"451","neighbor_band":"5G"}],"station_info":[],"child_devices":[{"device_name":"ddd","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[],"child_devices":[]}]}]}';
+	var object_json = JSON.parse(string_json);
+	data_push(object_json);
+		
+	var dom = document.getElementById("container");
+	var myChart = echarts.init(dom);
+	var app = {};
+
+
+	option = null;
+	option = {
+		 tooltip : {
+			show:true,
+			formatter:function (params) {
+var info;
+				for (date in data_info)
+				{
+					if (data_info[date].name == params.name)
+					{
+						if (data_info[date].type == "sta")
+						{
+						info = 'name: ' + params.name + '<br />' + 
+							'mac: ' + data_info[date].mac + '<br />' + 
+							'cable: '  + data_info[date].connect + '<br />' + 
+							'rssi: ' + data_info[date].rssi + '<br />' +
+							'downspeed: ' + data_info[date].downspeed+ '<br />' +
+							'upspeed: ' + data_info[date].upspeed;//添加信息在這裏
+						}
+						else
+						{
+						info = 'name: ' + params.name + '<br />' + 
+							'mac: ' + data_info[date].mac + '<br />' + 
+							'ip: ' + data_info[date].ip + '<br />' + 
+							'rssi: ' + data_info[date].rssi + '<br />' +
+							'cable: '  + data_info[date].connect + '<br />' + 
+							'count: ' + + data_info[date].count;//添加信息在這裏
+}
+					}
+				} 
+				return info;
+			},
+			backgroundColor:'#77ccf2'
+		},
+		/*animationDurationUpdate: 1500,*/
+		animationEasingUpdate: 'quinticInOut',
+		series : [
+			{
+				type: 'graph',
+				layout: 'none',
+				symbolSize: 50,
+				roam: true,
+				focusNodeAdjacency: true,
+				animation:false,
+				//edgeSymbol: ['circle', 'arrow'],
+				//edgeSymbolSize: [4, 10],
+				edgeLabel: {
+					normal: {
+						textStyle: {
+							fontSize: 20
+						}
+					}
+				},
+				itemStyle: {
+						color: '#77ccf2'
+					},
+				data: data_info,
+				links: link_info,
+				lineStyle: {
+					normal: {
+						opacity: 0.9,
+						width: 2,
+						curveness: 0
+					}
+				}
+			}
+		]
+	};;
+	if (option && typeof option === "object") {
+		myChart.setOption(option, true);
+	}
+	myChart.on('click', function (params) {
+		alert(params.name);
+	});
+}
+showTopology();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function aaa()
+{
+	var dom = document.getElementById("container");
+	var myChart = echarts.init(dom);
+	var app = {};
+	var date_test = [{"name":"control","x":0,"y":0,"symbol":"rect",value:11,mac:'123456789'}];
+	var link_test = [{source: 0,target: 1,lineStyle:{color:"red",type : 'dashed'}}]
+	var date_push_1 = {"name":"agent1","x":0,"y":200,label:{show:true,fontSize:10}}
+	var date_push_2 = {"name":"agent2","x":100,"y":200,label:{show:true,fontSize:10}}
+	var date_push_3 = {"name":"agent3","x":200,"y":200,label:{show:true,fontSize:10}}
+	var date_push_4 = {"name":"agent4","x":300,"y":200,label:{show:true,fontSize:10}}
+	var date_push_5 = {"name":"agent5","x":400,"y":200,label:{show:true,fontSize:10,position:"bottom"}}
+	var date_push_6 = {"name":"agent6","x":500,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	var date_push_7 = {"name":"agent7","x":600,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	var date_push_8 = {"name":"agent8","x":700,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	var date_push_9 = {"name":"agent9","x":800,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	var date_push_10 = {"name":"agent10","x":900,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	var date_push_11 = {"name":"agent11","x":1000,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	var date_push_12 = {"name":"agent12","x":1100,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	var date_push_13 = {"name":"agent13","x":1200,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	var date_push_14 = {"name":"agent14","x":1300,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	var date_push_15 = {"name":"agent15","x":1400,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	var date_push_16 = {"name":"agent16","x":1500,"y":200,label:{show:true,fontSize:10,position:"right"}}
+	
+	var link_push_1 = {source: 0,target: "agent1",name:"5G",lineStyle:{color:"blue",type : 'dotted'}}
+	var link_push_2 = {}
+	var link_push_3 = {source: 0,target: 4,lineStyle:{color:"blue"}}
+	var link_push_4 = {source: 0,target: 5,lineStyle:{color:"blue"}}
+	var link_push_5 = {source: 0,target: 6,lineStyle:{color:"blue"}}
+	var link_push_6 = {source: 0,target: 7,lineStyle:{color:"blue"}}
+	var link_push_7 = {source: 0,target: 8,lineStyle:{color:"blue"}}
+	var link_push_8 = {source: 0,target: 9,lineStyle:{color:"blue"}}
+	var link_push_9 = {source: 0,target: 10,lineStyle:{color:"blue"}}
+	var link_push_10 = {source: 0,target: 11,lineStyle:{color:"blue"}}
+	var link_push_11 = {source: 0,target: 12,lineStyle:{color:"blue"}}
+	var link_push_12 = {source: 0,target: 13,lineStyle:{color:"blue"}}
+	var link_push_13 = {source: 0,target: 14,lineStyle:{color:"blue"}}
+	var link_push_14 = {source: 0,target: 15,lineStyle:{color:"blue"}}
+	var link_push_15 = {}
+	
+	date_test.push(date_push_1);
+	date_test.push(date_push_2);
+	date_test.push(date_push_3);
+	date_test.push(date_push_4);
+	date_test.push(date_push_5);
+	date_test.push(date_push_6);
+	date_test.push(date_push_7);
+	date_test.push(date_push_8);
+	date_test.push(date_push_9);
+	date_test.push(date_push_10);
+	date_test.push(date_push_11);
+	date_test.push(date_push_12);
+	date_test.push(date_push_13);
+	date_test.push(date_push_14);
+	date_test.push(date_push_15);
+	date_test.push(date_push_16);
+
+	link_test.push(link_push_1);
+	link_test.push(link_push_2);
+	link_test.push(link_push_3);
+	link_test.push(link_push_4);
+	link_test.push(link_push_5);
+	link_test.push(link_push_6);
+	link_test.push(link_push_7);
+	link_test.push(link_push_8);
+	link_test.push(link_push_9);
+	link_test.push(link_push_10);
+	link_test.push(link_push_11);
+	link_test.push(link_push_12);
+	link_test.push(link_push_13);
+	link_test.push(link_push_14);
+	link_test.push(link_push_15);
+	
+	option = null;
+	option = {
+    /*title: {
+        text: 'Graph 简单示例'
+    },*/
+     tooltip : {
+		show:true,
+		formatter:function (params) {
+			for (date in date_test)
+			{
+				if (date_test[date].name == params.name)
+				{
+					info = 'name:' + params.name + '<br />' + 'mac:' + date_test[date].mac;
+				}
+			} 
+			return info;
+		},
+		backgroundColor:'#77ccf2'
+    },  
+    /*animationDurationUpdate: 1500,*/
+    /*animationEasingUpdate: 'quinticInOut',*/
+	/*hoverAnimation:true,*/
+	animation:false,
+    series : [
+        {
+            type: 'graph',
+            layout: 'none',
+            symbolSize: 20,
+            roam: true,
+			focusNodeAdjacency: true,
+            //edgeSymbol: ['circle', 'arrow'],
+            //edgeSymbolSize: [4, 10],
+            edgeLabel: {
+                normal: {
+                    textStyle: {
+                        fontSize: 10
+                    }
+                }
+            },
+			itemStyle: {
+                    color: '#77ccf2'
+                },
+			data: date_test,
+            links: link_test,
+            lineStyle: {
+                normal: {
+                    opacity: 0.9,
+                    width: 2,
+                    curveness: 0
+                }
+            }
+        }
+    ]
+};;
+if (option && typeof option === "object") {
+    myChart.setOption(option, true);
+}
+myChart.on('click', function (params) {
+    alert(params.name);
+});
+}
+
+       </script>
+   </body>
+</html>
