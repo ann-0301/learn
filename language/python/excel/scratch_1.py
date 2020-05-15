@@ -6,7 +6,10 @@ import time
 price_all = {}
 data_kind = []
 data_all  = {}
-with open('price.txt', 'r', encoding='UTF-8') as f:
+line_total = 0
+price_filename='price.txt'
+before_date_filename='before_date.txt'
+with open(price_filename, 'r', encoding='UTF-8') as f:
     for line in f:
         date_temp=line.split(":", 1)
         price_all[date_temp[0]]=int(date_temp[1])
@@ -36,7 +39,8 @@ def dump_kinds():
         print(str(j)+":"+kind)
 
 def write_data():
-    i = 1
+    global data_all
+    i = line_total + 1
     while True:
         write_flag_date = 0
         print("还继续录入吗？不继续的话请按 \'q\'，继续请按任意键")
@@ -66,7 +70,7 @@ def write_data():
 
         if sure_flag == 'y' or sure_flag == 'Y':
             if write_flag_date == 1:
-                worksheet.write(i, 0, date)
+#                worksheet.write(i, 0, date)
                 line_info = {'line_num':i}
                 data_all[date] = line_info
                 data_info = {chose_num:eval(input_num)}
@@ -80,24 +84,57 @@ def write_data():
                     data_info = {chose_num:eval(input_num)}
                     data_all[date].update(data_info)
             print(data_all)
-            worksheet.write_number(data_all[date]['line_num'], int(chose_num), data_all[date][chose_num])
+            with open(before_date_filename, 'w', encoding='UTF-8') as f:
+                f.write(str(data_all))
+                f.close()
+
+#            worksheet.write_number(data_all[date]['line_num'], int(chose_num), data_all[date][chose_num])
             i = i + 1
+			
+def continue_check():
+    try:
+        f = open(before_date_filename)
+        f.close()
+    except IOError:
+        return
+    print("是否继续之前的数据进行操作？Y or N")
+    continue_flag = input()
+    if continue_flag == 'y' or continue_flag == 'Y':
+        global data_all, line_total
+        with open(before_date_filename, 'r', encoding='UTF-8') as f:
+            lines = f.readlines()
+            data_all = eval(lines[0])
+            for date in data_all:
+                line_total = data_all[date]['line_num']
+                for colnum in data_all[date]:
+                    if colnum == 'line_num':
+                        continue
+            f.close()
+    elif continue_flag == 'n' or continue_flag == 'N':
+        with open(before_date_filename, 'w', encoding='UTF-8') as f:
+            f.truncate()
+            f.close()
+
+def save_excle():
+    for date in data_all:
+        worksheet.write(data_all[date]['line_num'], 0, date)
+        for colnum in data_all[date]:
+            if colnum == 'line_num':
+                continue
+            worksheet.write_number(data_all[date]['line_num'], int(colnum), data_all[date][colnum])
 
 def main():
+    continue_check()
     write_kinds()
     write_data()
+    save_excle()
     workbook.close()  # 关闭Excel文件
     exit(0)
 
 main()
 
 
-
-
 # bold = workbook.add_format({'blod': True})
-
-
-
 
 # 行列表示法的单元格下标以0作为起始值，如‘3,0’等价于‘A3’
 #worksheet.write(2, 1, 123)              # 使用列行表示法写入数字‘123’
