@@ -15,6 +15,7 @@ var level = 0;// 当前处于第几层
 var data_info = [];
 var link_info = [];
 var dev_num = 0; //AP + client标号
+var sta_counter = 0;
 
 function openWindow(url, windowName, wide, high) {
 	if (document.all)
@@ -45,11 +46,25 @@ function data_push(object_json)
 	dev_name=object_json.device_name+'('+String(device_counter)+')';
 	if (level == 0)
 	{
-		data_temp = {"name":dev_name,"x":x,"y":y,"symbol":"image:\/\/.\/424.jpg",mac:object_json.mac_address,count:device_counter,ip:object_json.ip_addr};
+		data_temp = {"name":dev_name,
+			"x":x,"y":y,
+			"symbol":"image:\/\/.\/controller.jpg",
+			mac:object_json.mac_address,
+			count:device_counter,
+			ip:object_json.ip_addr,
+			type:"controller"};
 	}
 	else
 	{
-		data_temp = {"name":dev_name,"x":x,"y":y,"symbol":"circle",label:{show:true,position:"inside"},mac:object_json.mac_address,count:device_counter,ip:object_json.ip_addr,rssi:Number(father_info.rssi)-100,connect:father_info.connect};
+		data_temp = {"name":dev_name,
+					"x":x,"y":y,"symbol":"image:\/\/.\/ap.jpg",
+					//label:{show:true,position:"inside"},
+					mac:object_json.mac_address,
+					count:device_counter,
+					ip:object_json.ip_addr,
+					rssi:father_info.rssi,
+					connect:father_info.connect,
+					type:"agent"};
 		for (data_search in object_json.neighbor_devices)
 		{
 		//object_json.neighbor_devices[data_search].
@@ -76,22 +91,65 @@ function data_push(object_json)
 	data_info.push(data_temp);
 	link_info.push(link_temp);
 	
-	if (0 != object_json["station_info"].length)
+	if ((0 != object_json["station_info"].length) || (0 != object_json["lan_port_info"].length))
 	{
 		level ++;
+		//var host_name = '{'+'"2816a859c33c":"wxwxwx"'+'}';
+		var host_name = '{'+''+'}';
+		var host_name_json = JSON.parse(host_name);
 		var father_num=dev_num;
-		for (sta_device in object_json["station_info"])
+		var hos_name_string = '';
+		for (sta_device in object_json["lan_port_info"])
 		{
 			dev_num++;
 			level_num[level]++;
+			sta_counter++;
 			x = (level_num[level] - 1) * 100;
 			y = level * 300;
-			var aaaaaa="station_info";
- 			var host_name = '{"70ef0029dc3b":"wangxiang-OMEN-by-HP-Laptop"}';
-var hostname_json = JSON.parse(host_name);
-		data_temp = {"name":hostname_json[object_json[aaaaaa][sta_device].station_mac],type:"sta","x":x,"y":y,"symbol":"bottom",label:{show:true,position:"bottom"},
-					mac:object_json["station_info"][sta_device].station_mac,connect:object_json["station_info"][sta_device].station_connected_band,
- 					rssi:Number(object_json["station_info"][sta_device].station_rssi)-100,downspeed:object_json["station_info"][sta_device].station_downlink,
+			if (typeof(host_name_json[object_json["lan_port_info"][sta_device].Non_1905_neighbour_mac_address]) == "undefined")
+{
+			var sta_mac = object_json["lan_port_info"][sta_device].Non_1905_neighbour_mac_address;
+			hos_name_string = 'STA_' + sta_mac.substring(sta_mac.length-3)+'('+String(sta_counter)+')';
+}
+			else
+{
+			hos_name_string = host_name_json[object_json["lan_port_info"][sta_device].Non_1905_neighbour_mac_address] +'('+String(sta_counter)+')';
+		}	
+			data_temp = {"name":hos_name_string,
+			type:"sta","x":x,"y":y,"symbol":"image:\/\/.\/computer.jpg","symbolSize":31,label:{show:true,position:"bottom"},
+					mac:object_json["lan_port_info"][sta_device].Non_1905_neighbour_mac_address,
+					connect:"ETH",
+ 					rssi:"N/A",
+					downspeed:"N/A",
+					upspeed:"N/A"};
+			line_color = "#77ccf2";
+			line_type = "solid"
+			link_temp = {source: father_num,target: dev_num,lineStyle:{color:line_color,type : line_type}}
+			data_info.push(data_temp);
+			link_info.push(link_temp);
+		}
+		for (sta_device in object_json["station_info"])
+		{
+			dev_num++;
+			sta_counter++;
+			level_num[level]++;
+			x = (level_num[level] - 1) * 100;
+			y = level * 300;
+			if (typeof(host_name_json[object_json["station_info"][sta_device].station_mac]) == "undefined")
+				hos_name_string = 'sta' + '('+String(sta_counter)+')';
+			else
+				hos_name_string = host_name_json[object_json["station_info"][sta_device].station_mac] +'('+String(sta_counter)+')';
+			var symbol_string = "";
+			if (object_json["station_info"][sta_device].station_connected_band == "ETH")
+				symbol_string = "image:\/\/.\/computer.jpg";
+			else
+				symbol_string = "image:\/\/.\/phone.jpg";
+			data_temp = {"name":hos_name_string,
+			type:"sta","x":x,"y":y,"symbol":symbol_string,"symbolSize":31,label:{show:true,position:"bottom"},
+					mac:object_json["station_info"][sta_device].station_mac,
+					connect:object_json["station_info"][sta_device].station_connected_band,
+ 					rssi:object_json["station_info"][sta_device].station_rssi,
+					downspeed:object_json["station_info"][sta_device].station_downlink,
 					upspeed:object_json["station_info"][sta_device].station_uplink};//添加信息在這裏
 			if (data_temp.connect == "5G")
 			{
@@ -112,6 +170,8 @@ var hostname_json = JSON.parse(host_name);
 			data_info.push(data_temp);
 			link_info.push(link_temp);
 		}
+		
+
 		level --;
 	}
 
@@ -139,10 +199,13 @@ var hostname_json = JSON.parse(host_name);
 
 function showTopology()
 {
-	/*var string_json = '{"device_name":"aaa","ip_addr":"192.168.2.1","mac_address":"00e04a267101","neighbor_devices":[{"neighbor_mac":"00e04c867101","neighbor_name":"ccccccc","neighbor_rssi":"0","neighbor_band":"TBU"}],"station_info":[],"child_devices":[{"device_name":"aaaaaa","ip_addr":"192.168.1.35","mac_address":"00e04c867010","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029dc3b","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"}],"child_devices":[{"device_name":"ddddd","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[],"child_devices":[]}]},{"device_name":"ccccccc","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029dc22","station_rssi":"51","station_connected_band":"TTT","station_downlink":"130","station_uplink":"1"}],"child_devices":[{"device_name":"eeee","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[{"station_mac":"70ef3339dc22","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"},{"station_mac":"70ef549dc22","station_rssi":"51","station_connected_band":"5G","station_downlink":"130","station_uplink":"1"},{"station_mac":"70ef00234dc22","station_rssi":"51","station_connected_band":"5G","station_downlink":"130","station_uplink":"1"}],"child_devices":[]},{"device_name":"ffff","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[],"child_devices":[{"device_name":"gggg","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029d12","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"}],"child_devices":[]}]}]}]}';*/
+//	var string_json = '{"device_name":"aaa","ip_addr":"192.168.2.1","mac_address":"00e04a267101","neighbor_devices":[{"neighbor_mac":"00e04c867101","neighbor_name":"ccccccc","neighbor_rssi":"0","neighbor_band":"TBU"}],"station_info":[],"child_devices":[{"device_name":"aaaaaa","ip_addr":"192.168.1.35","mac_address":"00e04c867010","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029dc3b","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"}],"child_devices":[{"device_name":"ddddd","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[],"child_devices":[]}]},{"device_name":"ccccccc","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029dc22","station_rssi":"51","station_connected_band":"TTT","station_downlink":"130","station_uplink":"1"}],"child_devices":[{"device_name":"eeee","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[{"station_mac":"70ef3339dc22","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"},{"station_mac":"70ef549dc22","station_rssi":"51","station_connected_band":"5G","station_downlink":"130","station_uplink":"1"},{"station_mac":"70ef00234dc22","station_rssi":"51","station_connected_band":"5G","station_downlink":"130","station_uplink":"1"}],"child_devices":[]},{"device_name":"ffff","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[],"child_devices":[{"device_name":"gggg","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029d12","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"}],"child_devices":[]}]}]}]}';
 var string_json = /*'{"device_name":"EasyMesh_Device","ip_addr":"192.168.1.1","mac_address":"142e5e27b49c","neighbor_devices":[{"neighbor_mac":"00e04c867101","neighbor_name":"ccccccc","neighbor_rssi":"0","neighbor_band":"5G"}],"station_info":[{"station_mac":"00e04c867010","station_rssi":"0","station_connected_band":"5G","station_downlink":"0","station_uplink":"0"}],"child_devices":[{"device_name":"ccccccc","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[],"child_devices":[]}]}';*/
-'{"device_name":"EasyMesh_Device","ip_addr":"192.168.1.1","mac_address":"142e5e27b49c","neighbor_devices":[{"neighbor_mac":"00e04c867010","neighbor_name":"aaaaaa","neighbor_rssi":"62","neighbor_band":"5G"},{"neighbor_mac":"00e04c867101","neighbor_name":"ccccccc","neighbor_rssi":"45","neighbor_band":"2G"}],"station_info":[],"child_devices":[{"device_name":"aaaaaa","ip_addr":"192.168.1.35","mac_address":"00e04c867010","neighbor_devices":[],"station_info":[{"station_mac":"70ef0029dc3b","station_rssi":"51","station_connected_band":"2G","station_downlink":"130","station_uplink":"1"}],"child_devices":[]},{"device_name":"ccccccc","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[{"neighbor_mac":"00e04c867101","neighbor_name":"ddd","neighbor_rssi":"451","neighbor_band":"5G"}],"station_info":[],"child_devices":[{"device_name":"ddd","ip_addr":"192.168.1.34","mac_address":"00e04c867101","neighbor_devices":[],"station_info":[],"child_devices":[]}]}]}';
-	var object_json = JSON.parse(string_json);
+//'{"device_name":"EasyMesh_Device","ip_addr":"192.168.1.1","mac_address":"142e5e31c810","neighbor_devices":[{"neighbor_mac":"142e5e344270","neighbor_name":"Agent4270","neighbor_rssi":"49","neighbor_band":"5G"},{"neighbor_mac":"142e5e344228","neighbor_name":"Agent4228","neighbor_rssi":"48","neighbor_band":"5G"}],"station_info":[{"station_mac":"0cdd24cd5faf","station_rssi":"45","station_connected_band":"ETH","station_downlink":"866","station_uplink":"866"},{"station_mac":"2816a859c33c","station_rssi":"43","station_connected_band":"5G","station_downlink":"866","station_uplink":"6"},{"station_mac":"b85d0a8f54e2","station_rssi":"41","station_connected_band":"5G","station_downlink":"866","station_uplink":"6"},{"station_mac":"6ce85c58a719","station_rssi":"10","station_connected_band":"5G","station_downlink":"58","station_uplink":"6"}],"child_devices":[{"device_name":"Agent4270","ip_addr":"192.168.1.33","mac_address":"142e5e344270","neighbor_devices":[],"station_info":[{"station_mac":"a8667f0dd09f","station_rssi":"62","station_connected_band":"5G","station_downlink":"780","station_uplink":"24"},{"station_mac":"68a03e4753ee","station_rssi":"59","station_connected_band":"5G","station_downlink":"702","station_uplink":"6"},{"station_mac":"68ecc580cf1e","station_rssi":"65","station_connected_band":"5G","station_downlink":"866","station_uplink":"866"},{"station_mac":"f018980058a9","station_rssi":"41","station_connected_band":"5G","station_downlink":"780","station_uplink":"24"},{"station_mac":"8866a534636d","station_rssi":"23","station_connected_band":"5G","station_downlink":"29","station_uplink":"24"},{"station_mac":"08e68986d218","station_rssi":"51","station_connected_band":"5G","station_downlink":"866","station_uplink":"24"},{"station_mac":"7cb27dfba3b0","station_rssi":"45","station_connected_band":"5G","station_downlink":"780","station_uplink":"780"}],"child_devices":[]},{"device_name":"Agent4228","ip_addr":"192.168.1.36","mac_address":"142e5e344228","neighbor_devices":[],"station_info":[{"station_mac":"0233d40cfdea","station_rssi":"37","station_connected_band":"5G","station_downlink":"29","station_uplink":"6"},{"station_mac":"fc017c0bd8eb","station_rssi":"51","station_connected_band":"5G","station_downlink":"780","station_uplink":"780"},{"station_mac":"a8db0352a3ae","station_rssi":"52","station_connected_band":"5G","station_downlink":"866","station_uplink":"866"},{"station_mac":"b46bfc8bffa6","station_rssi":"67","station_connected_band":"5G","station_downlink":"866","station_uplink":"866"},{"station_mac":"985fd34fa51e","station_rssi":"47","station_connected_band":"5G","station_downlink":"585","station_uplink":"6"},{"station_mac":"f8e94e3c2401","station_rssi":"57","station_connected_band":"5G","station_downlink":"866","station_uplink":"6"},{"station_mac":"483fe98f672b","station_rssi":"35","station_connected_band":"5G","station_downlink":"780","station_uplink":"6"},{"station_mac":"d89c676b6643","station_rssi":"68","station_connected_band":"5G","station_downlink":"866","station_uplink":"866"},{"station_mac":"76a6f3fa6c1f","station_rssi":"43","station_connected_band":"5G","station_downlink":"780","station_uplink":"6"},{"station_mac":"38539c60afea","station_rssi":"18","station_connected_band":"5G","station_downlink":"234","station_uplink":"6"},{"station_mac":"a8db0337316e","station_rssi":"27","station_connected_band":"5G","station_downlink":"520","station_uplink":"6"},{"station_mac":"c0ccf831945f","station_rssi":"60","station_connected_band":"2G","station_downlink":"144","station_uplink":"24"}],"child_devices":[]}]}';
+//'{"device_name":"EasyMesh_Device","ip_addr":"192.168.1.1","mac_address":"142e5e207aae","neighbor_devices":[{"neighbor_mac":"142e5e34424c","neighbor_name":"Controller424c","neighbor_rssi":"-1","neighbor_band":"ETH"}],"lan_port_info":[{"Non_1905_neighbour_mac_address":"123123"}],"station_info":[],"child_devices":[{"device_name":"Controller424c","ip_addr":"192.168.1.33","mac_address":"142e5e34424c","neighbor_devices":[],"lan_port_info":[{"Non_1905_neighbour_mac_address":"a0cec8ccbcc6"},{"Non_1905_neighbour_mac_address":"10653035f0ec"}],"station_info":[{"station_mac":"00e04c867010","station_rssi":"0","station_connected_band":"5G","station_downlink":"0","station_uplink":"0"}],"child_devices":[]}]}';
+//'{"device_name":"EasyMesh_Device","ip_addr":"192.168.1.1","mac_address":"142e5e207aae","neighbor_devices":[],"lan_port_info":[{"Non_1905_neighbour_mac_address":"10653035f0ec"}],"station_info":[],"child_devices":[]}';
+'{"device_name":"EasyMesh_Device","ip_addr":"192.168.1.1","mac_address":"142e5e31c810","neighbor_devices":[{"neighbor_mac":"142e5e344228","neighbor_name":"Agent4228","neighbor_rssi":"53","neighbor_band":"5G"},{"neighbor_mac":"142e5e344270","neighbor_name":"Agent4270","neighbor_rssi":"53","neighbor_band":"5G"}],"lan_port_info":[{"Non_1905_neighbour_mac_address":"ecf4bb4acde3"},{"Non_1905_neighbour_mac_address":"84ba3b15adb1"}],"station_info":[{"station_mac":"2816a859c33c","station_rssi":"47","station_connected_band":"5G","station_downlink":"866","station_uplink":"6"},{"station_mac":"b85d0a8f54e2","station_rssi":"32","station_connected_band":"5G","station_downlink":"866","station_uplink":"866"},{"station_mac":"7811dcd6a4fb","station_rssi":"64","station_connected_band":"2G","station_downlink":"39","station_uplink":"1"}],"child_devices":[{"device_name":"Agent4228","ip_addr":"192.168.1.49","mac_address":"142e5e344228","neighbor_devices":[],"lan_port_info":[{"Non_1905_neighbour_mac_address":"807871098e14"},{"Non_1905_neighbour_mac_address":"e4b97a361981"},{"Non_1905_neighbour_mac_address":"68ecc580cf1e"},{"Non_1905_neighbour_mac_address":"08e689a0c57f"},{"Non_1905_neighbour_mac_address":"0233d40cfdea"}],"station_info":[{"station_mac":"483fe98f672b","station_rssi":"53","station_connected_band":"5G","station_downlink":"650","station_uplink":"6"},{"station_mac":"68a03e4753ee","station_rssi":"42","station_connected_band":"5G","station_downlink":"585","station_uplink":"585"},{"station_mac":"6030d45fed9c","station_rssi":"40","station_connected_band":"5G","station_downlink":"585","station_uplink":"24"},{"station_mac":"a8db0352a3ae","station_rssi":"60","station_connected_band":"5G","station_downlink":"866","station_uplink":"6"},{"station_mac":"e89eb46b13fb","station_rssi":"64","station_connected_band":"2G","station_downlink":"144","station_uplink":"1"},{"station_mac":"7811dcd5be4b","station_rssi":"62","station_connected_band":"2G","station_downlink":"72","station_uplink":"58"}],"child_devices":[]},{"device_name":"Agent4270","ip_addr":"192.168.1.47","mac_address":"142e5e344270","neighbor_devices":[],"lan_port_info":[],"station_info":[{"station_mac":"f018980058a9","station_rssi":"34","station_connected_band":"5G","station_downlink":"650","station_uplink":"6"},{"station_mac":"7cb27dfba3b0","station_rssi":"48","station_connected_band":"5G","station_downlink":"866","station_uplink":"866"},{"station_mac":"a8667f0dd09f","station_rssi":"60","station_connected_band":"5G","station_downlink":"702","station_uplink":"24"},{"station_mac":"74ac5ff81938","station_rssi":"47","station_connected_band":"5G","station_downlink":"325","station_uplink":"6"},{"station_mac":"4098ada130db","station_rssi":"61","station_connected_band":"5G","station_downlink":"650","station_uplink":"6"},{"station_mac":"38539c60afea","station_rssi":"42","station_connected_band":"5G","station_downlink":"650","station_uplink":"6"},{"station_mac":"0233d40cfdea","station_rssi":"0","station_connected_band":"5G","station_downlink":"0","station_uplink":"0"},{"station_mac":"68ecc580cf1e","station_rssi":"0","station_connected_band":"5G","station_downlink":"0","station_uplink":"0"},{"station_mac":"08e689a0c57f","station_rssi":"0","station_connected_band":"5G","station_downlink":"0","station_uplink":"0"}],"child_devices":[]}]}';
+var object_json = JSON.parse(string_json);
 	data_push(object_json);
 		
 	var dom = document.getElementById("container");
@@ -155,9 +218,9 @@ var string_json = /*'{"device_name":"EasyMesh_Device","ip_addr":"192.168.1.1","m
 		 tooltip : {
 			show:true,
 			formatter:function (params) {
-var info;
 				for (date in data_info)
 				{
+					var info;
 					if (data_info[date].name == params.name)
 					{
 						if (data_info[date].type == "sta")
@@ -165,19 +228,27 @@ var info;
 						info = 'name: ' + params.name + '<br />' + 
 							'mac: ' + data_info[date].mac + '<br />' + 
 							'cable: '  + data_info[date].connect + '<br />' + 
-							'rssi: ' + data_info[date].rssi + '<br />' +
+							'rssi: '  + data_info[date].rssi + '<br />' +
 							'downspeed: ' + data_info[date].downspeed+ '<br />' +
-							'upspeed: ' + data_info[date].upspeed;//添加信息在這裏
+							'upspeed: ' + data_info[date].upspeed;//添加client信息在这里
+						}
+						else if (data_info[date].type == "controller")
+						{
+						info = 'name: ' + params.name + '<br />' +
+							'type: ' + data_info[date].type + '<br />' +
+							'mac: ' + data_info[date].mac + '<br />' + 
+							'ip: ' + data_info[date].ip + '<br />';
+							//添加controller信息在这里
 						}
 						else
 						{
-						info = 'name: ' + params.name + '<br />' + 
+							info = 'name: ' + params.name + '<br />' + 
+							'type: ' + data_info[date].type + '<br />' +
 							'mac: ' + data_info[date].mac + '<br />' + 
 							'ip: ' + data_info[date].ip + '<br />' + 
-							'rssi: ' + data_info[date].rssi + '<br />' +
-							'cable: '  + data_info[date].connect + '<br />' + 
-							'count: ' + + data_info[date].count;//添加信息在這裏
-}
+							'rssi: '  + data_info[date].rssi + '<br />' +
+							'cable: '  + data_info[date].connect;//添加AP信息在这里
+						}
 					}
 				} 
 				return info;
