@@ -23,7 +23,6 @@ def dump_kinds():
         j = j + 1
         print(str(j) + ":" + kind)
 
-
 date_before = ''
 def write_data():
     global data_all, date_before
@@ -66,6 +65,12 @@ def write_data():
                 data_all[date].update(data_info)
             else:
                 data_all[date] = {chose_num: eval(input_num)}
+        else:
+            print ("\n")
+            print('######################################################')
+            print('！！！！！WARNING:刚才的数据没有保存，请注意！！！！！')
+            print('######################################################')
+            print ("\n")
 
         print(data_all)
         with open(before_date_filename, 'w', encoding='UTF-8') as f:
